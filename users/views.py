@@ -75,3 +75,10 @@ def authuser_view(request):
     
     except Exception as e:
         return Response(data=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+@api_view(['GET'])
+def logout_view(request):
+    response = Response(data={'logged out'})
+    response.delete_cookie('jwt_token')
+    return response
+    

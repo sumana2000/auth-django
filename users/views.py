@@ -6,6 +6,12 @@ from rest_framework.exceptions import AuthenticationFailed
 from .serializers import UserSerializer
 from .models import User
 import jwt, datetime
+from dotenv import load_dotenv, find_dotenv
+import os
+
+load_dotenv(find_dotenv())
+
+jwt_key = os.getenv('JWT_SECRET')
 
 @api_view(['POST'])
 def register_view(request):
@@ -24,7 +30,7 @@ def login_view(request):
         email = request.data['email']
         password = request.data['password']
         user = User.objects.filter(email=email).first()
-        print((user))
+        
         if user is None:
             raise AuthenticationFailed('User not found')
         if not user.check_password(password):
@@ -37,7 +43,7 @@ def login_view(request):
 
         }
 
-        token = jwt.encode(payload, 'secret key', algorithm='HS256')
+        token = jwt.encode(payload, jwt_key, algorithm='HS256')
 
         response = Response(data={'jwt_token':token})
 
@@ -48,3 +54,24 @@ def login_view(request):
     except Exception as e:
         return Response(data=str(e),status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['GET'])
+def authuser_view(request):
+    try:
+        token = request.COOKIES['jwt_token']
+
+        if not token:
+            raise AuthenticationFailed('unauthenticated')
+        
+        payload = jwt.decode(token, jwt_key, algorithms=['HS256'])
+        # print(payload)
+
+        user = User.objects.filter(id=payload['id']).first()
+        if not user:
+            raise AuthenticationFailed('user not found')
+        
+        print(UserSerializer(user).data)
+
+        return Response(data=UserSerializer(user).data)
+    
+    except Exception as e:
+        return Response(data=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
